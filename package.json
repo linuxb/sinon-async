@@ -15,7 +15,8 @@
   "license": "BSD-3-Clause",
   "scripts": {
     "ci-test": "npm run lint && ./scripts/ci-test.sh",
-    "test-node": "mocha --recursive -R dot test/",
+    "test-node": "mocha --recursive --timeout=6000 -R dot test/",
+    "test-node-cov": "istanbul cover _mocha -- --recursive --timeout=6000 -R dot test/",
     "test-headless": "mochify --recursive -R dot --grep WebWorker --invert test/",
     "test-coverage": "mochify --recursive -R dot --grep WebWorker --invert --plugin [ mochify-istanbul --report text --report lcovonly --dir ./coverage ] test/",
     "test-cloud": "npm run test-headless -- --wd",
@@ -46,7 +47,8 @@
     "phantomic": "^1.4.0",
     "pre-commit": "^1.1.2",
     "referee": "^1.2.0",
-    "rimraf": "^2.5.3"
+    "rimraf": "^2.5.3",
+    "should": "^11.1.0"
   },
   "files": [
     "lib",

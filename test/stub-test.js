@@ -9,6 +9,7 @@ var createInstance = require("../lib/sinon/util/core/create");
 var assert = referee.assert;
 var refute = referee.refute;
 var fail = referee.fail;
+var should = require('should');
 
 describe("stub", function () {
     it("is spy", function () {
@@ -281,6 +282,86 @@ describe("stub", function () {
             assert.exception(function () {
                 stub.callsArg({});
             }, "TypeError");
+        });
+    });
+
+    //add new hooks tests
+    describe('.setBeforeCallbackHook',function () {
+        before(function () {
+            this.fs = require('fs');
+            var self = this;
+            this.invokePromiseContextify = function () {
+                return new Promise(function (resolve,reject) {
+                    setTimeout(function () {
+                        self.fs.readFile('fake_path',function (err,data) {
+                            if(err) {
+                                // console.log(err);
+                                return reject(err);
+                            }
+                            resolve(data.toString());
+                        },800);
+                    });
+                });
+            };
+            this.stubProxy = createStub(this.fs,'readFile');
+        });
+        after(function () {
+            this.fs.readFile.restore();
+        });
+        it('custom behaviors will be applied normally',function () {
+            //async operation callback will be called after assertion
+            this.stubProxy.yields(null,'test file').setBeforeCallbackHook(function () {
+                //we do nothing
+                //test this hook callback will be invoked or not
+                //this's a sync code
+                //args should be 'hook invoked'
+            }).yieldsBeforeCallbackHook(null);
+            return this.invokePromiseContextify().should.be.fulfilledWith('test file');
+        });
+        //test with injector
+        it('hook callback can send message to real callback',function () {
+            this.stubProxy.yields(null,'test file').setBeforeCallbackHook(function (args) {
+                var interceptors = [{
+                    pos: 1,
+                    value: args
+                }];
+                return interceptors;
+            }).yieldsBeforeCallbackHook(null,'hook invoked');
+            return this.invokePromiseContextify().should.be.fulfilledWith('hook invoked');
+        });
+        //set timeout to build sandbox for IO operations
+        //test with timeout
+        it('custom behaviors will be applied after timeout we set',function () {
+            this.stubProxy.yields(null,'test file').setBeforeCallbackHook(function (args) {
+                var interceptors = [{
+                    pos: 1,
+                    value: args
+                }];
+                return interceptors;
+            },{ timeout: 2000 }).yieldsBeforeCallbackHook({ sandbox: true },'hook invoked');
+            return this.invokePromiseContextify().should.be.fulfilledWith('hook invoked');
+        });
+        //test with promise
+        it('call real callback when promise resolved',function () {
+            this.stubProxy.yields(null,'test file').setBeforeCallbackHook(function (args) {
+                return new Promise(function (resolve,reject) {
+                    var interceptors = [{
+                        pos: 1,
+                        value: args
+                    }];
+                    setTimeout(function () {
+                        resolve(interceptors);
+                    },1000);
+                });
+            },{ timeout: 2000, promisified: true }).yieldsBeforeCallbackHook(null,'hook invoked');
+            return this.invokePromiseContextify().should.be.fulfilledWith('hook invoked');
+        });
+        //test with rejected promise
+        it('throw error when promise rejected',function () {
+            this.stubProxy.yields('error').setBeforeCallbackHook(function () {
+                //do nothing
+            }).yieldsBeforeCallbackHook();
+            return this.invokePromiseContextify().should.be.rejected();
         });
     });
 
