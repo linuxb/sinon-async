@@ -295,7 +295,6 @@ describe("stub", function () {
                     setTimeout(function () {
                         self.fs.readFile('fake_path',function (err,data) {
                             if(err) {
-                                // console.log(err);
                                 return reject(err);
                             }
                             resolve(data.toString());
